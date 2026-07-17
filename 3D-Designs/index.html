@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Model Gallery</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    background: #1a1a1a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #ffffff;
+  }
+  .wrap {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 48px 24px;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 24px;
+  }
+  .list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  a.card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-radius: 12px;
+    background: #262626;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 500;
+  }
+  a.card:active {
+    background: #303030;
+  }
+  a.card .arrow {
+    color: rgba(255,255,255,0.4);
+    font-size: 18px;
+  }
+  .empty {
+    color: rgba(255,255,255,0.5);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .empty code {
+    background: #262626;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    word-break: break-all;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>3D model gallery</h1>
+  <div class="list" id="list"></div>
+</div>
+
+<script>
+  /*
+    No setup needed on GitHub Pages — the username and repo are
+    auto-detected from the page URL. Just upload .glb files into
+    the FOLDER below and they appear automatically.
+
+    Only fill in the OVERRIDE values if auto-detection is wrong
+    (e.g. you're using a custom domain).
+  */
+  const FOLDER = "3D-Designs";      // must match the folder name in the repo EXACTLY (case-sensitive)
+  const OVERRIDE_USER = "";          // e.g. "erik123" — leave blank to auto-detect
+  const OVERRIDE_REPO = "";          // e.g. "3D-Designs" — leave blank to auto-detect
+
+  const list = document.getElementById('list');
+
+  function detectRepoInfo() {
+    let user = OVERRIDE_USER;
+    let repo = OVERRIDE_REPO;
+
+    const host = window.location.hostname;   // e.g. "erik123.github.io"
+    const parts = window.location.pathname.split('/').filter(Boolean);
+
+    if (!user && host.endsWith('.github.io')) {
+      user = host.split('.')[0];
+    }
+    if (!repo) {
+      if (host.endsWith('.github.io') && parts.length > 0 && !parts[0].endsWith('.html')) {
+        // Project page: username.github.io/REPO/...
+        repo = parts[0];
+      } else if (user) {
+        // User page: the repo is named username.github.io
+        repo = user + '.github.io';
+      }
+    }
+    return { user, repo };
+  }
+
+  function prettyName(filename) {
+    return filename
+      .replace(/\.glb$/i, '')
+      .replace(/[-_]+/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
+  }
+
+  function showError(html) {
+    list.innerHTML = '<p class="empty">' + html + '</p>';
+  }
+
+  async function tryFetch(user, repo, ref) {
+    const url = 'https://api.github.com/repos/' + user + '/' + repo +
+                '/contents/' + FOLDER + (ref ? '?ref=' + ref : '');
+    const res = await fetch(url);
+    return { url, res };
+  }
+
+  async function loadDesigns() {
+    const { user, repo } = detectRepoInfo();
+
+    if (!user || !repo) {
+      showError(
+        'Could not auto-detect the repo from this URL (' + window.location.hostname + '). ' +
+        'If you are using a custom domain or testing locally, fill in OVERRIDE_USER and ' +
+        'OVERRIDE_REPO at the top of index.html.'
+      );
+      return;
+    }
+
+    try {
+      // Try the default branch first, then common Pages branches.
+      let attempt = await tryFetch(user, repo, null);
+      if (attempt.res.status === 404) attempt = await tryFetch(user, repo, 'gh-pages');
+      if (attempt.res.status === 404) attempt = await tryFetch(user, repo, 'main');
+      if (attempt.res.status === 404) attempt = await tryFetch(user, repo, 'master');
+
+      const { url, res } = attempt;
+
+      if (res.status === 403) {
+        showError('GitHub API rate limit reached for your network. Wait a few minutes and refresh.');
+        return;
+      }
+      if (res.status === 404) {
+        showError(
+          'The folder was not found. The page looked for:<br><code>' + url + '</code><br><br>' +
+          'Check that (1) the repo is public, (2) a folder named <code>' + FOLDER +
+          '</code> exists in it with exactly that capitalization, and (3) your .glb files are inside it.'
+        );
+        return;
+      }
+      if (!res.ok) {
+        showError('GitHub API error ' + res.status + ' for:<br><code>' + url + '</code>');
+        return;
+      }
+
+      const items = await res.json();
+      const glbs = items.filter(f => f.type === 'file' && /\.glb$/i.test(f.name));
+
+      if (glbs.length === 0) {
+        showError('No .glb files found in <code>' + FOLDER + '/</code> yet. Upload one and refresh.');
+        return;
+      }
+
+      glbs.forEach(f => {
+        const name = prettyName(f.name);
+        const a = document.createElement('a');
+        a.className = 'card';
+        a.href = 'viewer.html?model=' + encodeURIComponent(FOLDER + '/' + f.name) +
+                 '&name=' + encodeURIComponent(name);
+        a.innerHTML = '<span>' + name + '</span><span class="arrow">&#8250;</span>';
+        list.appendChild(a);
+      });
+    } catch (err) {
+      showError('Network error while contacting the GitHub API. Details are in the browser console (F12).');
+      console.error(err);
+    }
+  }
+
+  loadDesigns();
+</script>
+</body>
+</html>
