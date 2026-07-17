@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>3D Model Viewer</title>
+<script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    background: #1a1a1a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  model-viewer {
+    width: 100%;
+    height: 100vh;
+    background-color: #1a1a1a;
+  }
+  .back {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 14px;
+    background: rgba(0,0,0,0.4);
+    padding: 8px 14px;
+    border-radius: 999px;
+  }
+  .hint {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.6);
+    font-size: 13px;
+    letter-spacing: 0.02em;
+    pointer-events: none;
+    text-align: center;
+    width: 90%;
+  }
+</style>
+</head>
+<body>
+
+  <a class="back" href="index.html">&larr; All designs</a>
+
+  <model-viewer
+    id="viewer"
+    alt="3D model"
+    camera-controls
+    auto-rotate
+    auto-rotate-delay="1500"
+    rotation-per-second="20deg"
+    shadow-intensity="1"
+    exposure="1">
+  </model-viewer>
+
+  <div class="hint">Drag to rotate &bull; Pinch to zoom</div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const modelPath = params.get('model');
+    const viewer = document.getElementById('viewer');
+    if (modelPath) {
+      viewer.setAttribute('src', modelPath);
+    }
+  </script>
+
+</body>
+</html>
