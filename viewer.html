@@ -64,9 +64,14 @@
   <script>
     const params = new URLSearchParams(window.location.search);
     const modelPath = params.get('model');
+    const modelName = params.get('name');
     const viewer = document.getElementById('viewer');
     if (modelPath) {
       viewer.setAttribute('src', modelPath);
+    }
+    if (modelName) {
+      document.title = modelName;
+      viewer.setAttribute('alt', modelName);
     }
   </script>
 

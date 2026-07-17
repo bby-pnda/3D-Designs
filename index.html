@@ -62,28 +62,55 @@
 
 <script>
   /*
-    ADD A NEW DESIGN:
-    Just add one line below — { name: "...", file: "3D-Designs/FOLDER/model.glb" } —
-    matching the folder name you upload into 3D-Designs/.
+    SETUP (one time only):
+    Fill in your GitHub username and repo name below.
+    After that, just upload .glb files into the 3D-Designs/ folder —
+    they'll appear here automatically. No code edits needed.
   */
-  const designs = [
-    { name: "Design 1", file: "3D-Designs/design1/model.glb" },
-    { name: "Design 2", file: "3D-Designs/design2/model.glb" },
-  ];
+  const GITHUB_USER = "YOUR-USERNAME";
+  const GITHUB_REPO = "3D-Designs";
+  const FOLDER = "3D-Designs";
 
   const list = document.getElementById('list');
 
-  if (designs.length === 0) {
-    list.innerHTML = '<p class="empty">No designs added yet.</p>';
-  } else {
-    designs.forEach(d => {
-      const a = document.createElement('a');
-      a.className = 'card';
-      a.href = 'viewer.html?model=' + encodeURIComponent(d.file) + '&name=' + encodeURIComponent(d.name);
-      a.innerHTML = '<span>' + d.name + '</span><span class="arrow">&#8250;</span>';
-      list.appendChild(a);
-    });
+  // Turn "my-cool_design2.glb" into "My Cool Design2"
+  function prettyName(filename) {
+    return filename
+      .replace(/\.glb$/i, '')
+      .replace(/[-_]+/g, ' ')
+      .replace(/\b\w/g, c => c.toUpperCase());
   }
+
+  async function loadDesigns() {
+    try {
+      const res = await fetch(
+        'https://api.github.com/repos/' + GITHUB_USER + '/' + GITHUB_REPO + '/contents/' + FOLDER
+      );
+      if (!res.ok) throw new Error('GitHub API returned ' + res.status);
+      const items = await res.json();
+
+      const glbs = items.filter(f => f.type === 'file' && /\.glb$/i.test(f.name));
+
+      if (glbs.length === 0) {
+        list.innerHTML = '<p class="empty">No designs added yet. Upload a .glb file into the ' + FOLDER + '/ folder.</p>';
+        return;
+      }
+
+      glbs.forEach(f => {
+        const name = prettyName(f.name);
+        const a = document.createElement('a');
+        a.className = 'card';
+        a.href = 'viewer.html?model=' + encodeURIComponent(FOLDER + '/' + f.name) + '&name=' + encodeURIComponent(name);
+        a.innerHTML = '<span>' + name + '</span><span class="arrow">&#8250;</span>';
+        list.appendChild(a);
+      });
+    } catch (err) {
+      list.innerHTML = '<p class="empty">Could not load the design list. Check that GITHUB_USER and GITHUB_REPO are set correctly at the top of index.html.</p>';
+      console.error(err);
+    }
+  }
+
+  loadDesigns();
 </script>
 </body>
 </html>
